@@ -65,6 +65,10 @@ const char KEYPAD_KEYS[KEYPAD_ROWS][KEYPAD_COLS] = {{'1', '2', '3', 'A'},
 #define GSM_RX_PIN 16 // ESP32 RX ← SIM800L TX
 #define GSM_BAUD 9600
 #define SMS_CONFIG_FILE "/sms_config.txt"
+// Country code for phone number formatting (local → international)
+// Change this to match your country: "+234" (Nigeria), "+63" (Philippines),
+// etc.
+#define SMS_COUNTRY_CODE "+234"
 
 // ---------- Timing ----------
 #define SENSOR_READ_DELAY 1000 // ms between sensor readings
