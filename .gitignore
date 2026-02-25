@@ -1,0 +1,22 @@
+# OS generated
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+*.code-workspace
+.idea/
+
+# Arduino build
+ESP32_FARM/build/
+ESP32_FARM/*.bin
+ESP32_FARM/*.elf
+
+# PHP / XAMPP logs
+web/*.log
+web/error_log
+
+# Gemini / Agent
+.gemini/
+.agent/

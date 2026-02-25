@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Farm Dashboard</title>
+    <meta name="description"
+        content="Farm Soil Data Collection Dashboard - Monitor NPK, pH, EC, Temperature and Humidity readings from the field.">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <div class="logo">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                <h1>Farm<span>Data</span></h1>
+            </div>
+            <span class="badge">ESP32 Soil Monitor</span>
+        </div>
+        <div class="header-right">
+            <div id="sync-status" class="sync-status">
+                <span class="sync-dot"></span>
+                <span id="sync-text">Checking...</span>
+            </div>
+            <button id="sync-btn" class="btn btn-primary" onclick="triggerSync()">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M23 4v6h-6" />
+                    <path d="M1 20v-6h6" />
+                    <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+                </svg>
+                Sync Now
+            </button>
+        </div>
+    </header>
+
+    <!-- Stats Cards -->
+    <section class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon" style="--accent: #10b981;">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Total Farmers</span>
+                <span class="stat-value" id="stat-farmers">--</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="--accent: #6366f1;">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                </svg>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Total Readings</span>
+                <span class="stat-value" id="stat-readings">--</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="--accent: #f59e0b;">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="5" />
+                    <line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" />
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                    <line x1="1" y1="12" x2="3" y2="12" />
+                    <line x1="21" y1="12" x2="23" y2="12" />
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                </svg>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Avg Temperature</span>
+                <span class="stat-value" id="stat-temp">--°C</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="--accent: #ef4444;">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                </svg>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Avg pH</span>
+                <span class="stat-value" id="stat-ph">--</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Left: Charts -->
+        <section class="panel chart-panel">
+            <div class="panel-header">
+                <h2>Soil Parameters Overview</h2>
+                <select id="chart-farmer-filter" onchange="loadReadings()">
+                    <option value="">All Farmers</option>
+                </select>
+            </div>
+            <div class="chart-container">
+                <canvas id="soilChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Right: Farmers List -->
+        <section class="panel farmers-panel">
+            <div class="panel-header">
+                <h2>Registered Farmers</h2>
+                <input type="text" id="farmer-search" placeholder="Search ID or phone..." oninput="searchFarmers()">
+            </div>
+            <div class="table-wrap" id="farmers-table-wrap">
+                <table id="farmers-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Phone</th>
+                            <th>Readings</th>
+                            <th>Last</th>
+                        </tr>
+                    </thead>
+                    <tbody id="farmers-tbody">
+                        <tr>
+                            <td colspan="4" class="loading">Loading farmers...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Readings Table -->
+    <section class="panel readings-panel">
+        <div class="panel-header">
+            <h2>Soil Readings Log</h2>
+            <div class="pagination">
+                <button class="btn btn-sm" onclick="prevPage()">← Prev</button>
+                <span id="page-info">Page 1</span>
+                <button class="btn btn-sm" onclick="nextPage()">Next →</button>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table id="readings-table">
+                <thead>
+                    <tr>
+                        <th>Farmer</th>
+                        <th>Timestamp</th>
+                        <th>Humidity</th>
+                        <th>Temp</th>
+                        <th>EC</th>
+                        <th>pH</th>
+                        <th>N</th>
+                        <th>P</th>
+                        <th>K</th>
+                    </tr>
+                </thead>
+                <tbody id="readings-tbody">
+                    <tr>
+                        <td colspan="9" class="loading">Loading readings...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- SMS Settings Panel -->
+    <section class="panel sms-panel">
+        <div class="panel-header">
+            <h2>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+                    style="vertical-align: middle; margin-right: 6px;">
+                    <path
+                        d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                </svg>
+                SMS Settings
+            </h2>
+            <div class="sms-toggle-wrap">
+                <span class="toggle-label" id="sms-status-text">Disabled</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="sms-enabled-toggle" onchange="toggleSmsStatus()">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+        <div class="sms-body">
+            <div class="sms-template-section">
+                <label class="sms-label">Message Template</label>
+                <p class="sms-hint">Use placeholders below to insert soil data values. Click a tag to insert it.</p>
+                <div class="placeholder-tags">
+                    <button class="tag" onclick="insertPlaceholder('farmer_id')">{farmer_id}</button>
+                    <button class="tag" onclick="insertPlaceholder('humidity')">{humidity}</button>
+                    <button class="tag" onclick="insertPlaceholder('temperature')">{temperature}</button>
+                    <button class="tag" onclick="insertPlaceholder('ph')">{ph}</button>
+                    <button class="tag" onclick="insertPlaceholder('ec')">{ec}</button>
+                    <button class="tag" onclick="insertPlaceholder('nitrogen')">{nitrogen}</button>
+                    <button class="tag" onclick="insertPlaceholder('phosphorus')">{phosphorus}</button>
+                    <button class="tag" onclick="insertPlaceholder('potassium')">{potassium}</button>
+                    <button class="tag" onclick="insertPlaceholder('timestamp')">{timestamp}</button>
+                </div>
+                <textarea id="sms-template" rows="6" placeholder="Type your SMS template here..."></textarea>
+                <div class="sms-footer">
+                    <span class="char-count" id="sms-char-count">0 chars</span>
+                    <button class="btn btn-primary" id="save-sms-btn" onclick="saveSmsSettings()">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                            <polyline points="17 21 17 13 7 13 7 21" />
+                            <polyline points="7 3 7 8 15 8" />
+                        </svg>
+                        Save Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
