@@ -36,8 +36,8 @@ void lcdPrintCentered(int row, const char *text) {
 
 void lcdShowBoot() {
   lcd.clear();
-  lcdPrintCentered(0, "FARM DATA");
-  lcdPrintCentered(1, "COLLECTOR v1.0");
+  lcdPrintCentered(0, "FARM SPACE");
+  lcdPrintCentered(1, "BY ActionLab v1");
 }
 
 void lcdShowWiFiConnecting() {
